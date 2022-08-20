@@ -1,8 +1,9 @@
 import timeit
 import keyboard
 import ezsheets
-from datetime import timedelta, datetime
+from datetime import datetime
 import time
+import smtplib, ssl
 
 
 class TMS:
@@ -19,6 +20,13 @@ class TMS:
         self.sh.update(2, 1, 'End time:')
         self.row_to_start = 0
         self.minute_counter = 0
+        self.port = 465
+        self.smtp_server = ""
+        self.sender_email = ""
+        self.receiver_email = ""
+        self.password = ''
+        self.message = ''
+        self.end_date = ''
 
     def check_free_row(self):
         self.row_to_start = self.sh.rowCount + 1
@@ -29,14 +37,14 @@ class TMS:
         print(f'Please press "S" on keyboard to end')
         self.start = timeit.default_timer()
         self.start_date = self.time_now
-        return self.sh.update(1, self.row_to_start, str(self.start_date)[0:18])
+        self.start_date = str(self.start_date).split('.')[0]
+        return self.sh.update(1, self.row_to_start, self.start_date)
 
     def stop_timer(self):
         start_time = time.time()
         while True:
             if time.time() - start_time >= 60:
                 print('Another minute passed, updating the sheet...')
-                self.minute_counter += 1
                 self.timer_calc()
                 start_time = time.time()
             if keyboard.is_pressed("s"):
@@ -45,7 +53,24 @@ class TMS:
                 return self.stop
 
     def timer_calc(self):
-        return self.sh.update(2, self.row_to_start, str(datetime.now() + timedelta(minutes=self.minute_counter))[0:18])
+        self.end_date = str(datetime.now()).split('.')[0]
+        return self.sh.update(2, self.row_to_start, self.end_date)
+
+    def send_mail(self):
+        context = ssl.create_default_context()
+        self.password = input("Type SMTP server password and press enter: ")
+        self.sender_email = input("Please type sender email address and press enter: ")
+        self.receiver_email = input("Please type email address where to send todays information: ")
+        self.message = f"""\
+        Subject: TMS data
+        Start: {self.start_date}
+        End: {self.end_date}
+        This message is sent from Python."""
+        print(self.message)
+        with smtplib.SMTP_SSL(self.smtp_server, self.port, context=context) as server:
+            server.login(self.sender_email, self.password)
+            server.sendmail(self.sender_email, self.receiver_email, self.message)
+        print('Thanks, email sent!')
 
 
 timer = TMS()
@@ -53,3 +78,4 @@ timer.check_free_row()
 timer.start_timer()
 timer.stop_timer()
 timer.timer_calc()
+timer.send_mail()
