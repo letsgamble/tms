@@ -54,6 +54,9 @@ class TMS:
         self.end_date = str(datetime.now()).split('.')[0]
         return self.sh.update(2, self.row_to_start, self.end_date)
 
+    def summary(self):
+        print(f'You worked from {self.start_date} to {self.end_date}')
+
     def send_mail(self):
         context = ssl.create_default_context()
         self.password = input("Type SMTP server password and press enter: ")
@@ -76,4 +79,5 @@ timer.check_free_row()
 timer.start_timer()
 timer.stop_timer()
 timer.timer_calc()
+timer.summary()
 timer.send_mail()
