@@ -10,23 +10,21 @@ class TMS:
     def __init__(self):
         self.SHEET = ezsheets.Spreadsheet('1ndTuG1hOlNoAHHQJy9U1RQ1YbnRfscjaqLYDnlY-nUE')
         self.sh = self.SHEET.sheets[0]
-        self.calculator = 0
         self.start = 0
         self.stop = 0
-        self.start_date = 0
+        self.start_date = ''
+        self.end_date = ''
         self.check_free_row()
         self.time_now = datetime.now()
         self.sh.update(1, 1, 'Start time:')
         self.sh.update(2, 1, 'End time:')
         self.row_to_start = 0
-        self.minute_counter = 0
         self.port = 465
         self.smtp_server = ""
         self.sender_email = ""
         self.receiver_email = ""
         self.password = ''
         self.message = ''
-        self.end_date = ''
 
     def check_free_row(self):
         self.row_to_start = self.sh.rowCount + 1
