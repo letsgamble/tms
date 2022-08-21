@@ -5,7 +5,6 @@ import time
 import smtplib, ssl
 import PySimpleGUI as sg
 from threading import Thread
-from time import sleep
 import os
 from dotenv import load_dotenv
 from os.path import exists
