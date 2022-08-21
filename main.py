@@ -1,5 +1,4 @@
 import timeit
-import keyboard
 import ezsheets
 from datetime import datetime
 import time
@@ -7,6 +6,9 @@ import smtplib, ssl
 import PySimpleGUI as sg
 from threading import Thread
 from time import sleep
+import os
+from dotenv import load_dotenv
+from os.path import exists
 
 
 class TMS:
@@ -21,18 +23,35 @@ class TMS:
         self.sh.update(1, 1, 'Start time:')
         self.sh.update(2, 1, 'End time:')
         self.row_to_start = self.sh.rowCount + 1
-        self.port = 465
+        self.env_file()
         self.smtp_server = ""
+        self.port = ""
         self.sender_email = ""
         self.receiver_email = ""
-        self.password = ''
-        self.message = ''
+        self.password = ""
         self.kill_the_timer = True
         self.thread = None
 
+    def env_file(self):
+        ENV_FILE_EXISTS = exists('.env')
+        if ENV_FILE_EXISTS:
+            load_dotenv()
+        else:
+            with open(".env", "w") as f:
+                smtp_server = input('Input SMTP server: ')
+                port = input('Input port: ')
+                sender_email = input('Input sender email: ')
+                password = input('Input password: ')
+                receiver_email = input('Input receiver email: ')
+                f.write(f'smtp_server={smtp_server}\n')
+                f.write(f'port={port}\n')
+                f.write(f'sender_email={sender_email}\n')
+                f.write(f'password={password}\n')
+                f.write(f'receiver_email={receiver_email}\n')
+            load_dotenv()
+
     def start_timer(self):
-        print(f'This program will track your time')
-        print(f'Please press "S" on keyboard to end')
+        print('Start initiated.')
         self.start = timeit.default_timer()
         self.start_date = self.time_now
         self.start_date = str(self.start_date).split('.')[0]
@@ -41,7 +60,7 @@ class TMS:
     def stop_timer(self):
         start_time = time.time()
         while not self.kill_the_timer:
-            if time.time() - start_time >= 5:
+            if time.time() - start_time >= 60:
                 sleep(0.5)
                 print('Another minute passed, updating the sheet...')
                 self.timer_calc()
@@ -60,33 +79,35 @@ class TMS:
 
     def send_mail(self):
         context = ssl.create_default_context()
-        self.password = input("Type SMTP server password and press enter: ")
-        self.sender_email = input("Please type sender email address and press enter: ")
-        self.receiver_email = input("Please type email address where to send todays information: ")
-        self.message = f"""\
+        self.smtp_server = os.getenv('smtp_server')
+        self.port = int(os.getenv('port'))
+        self.sender_email = os.getenv('sender_email')
+        self.password = os.getenv('password')
+        self.receiver_email = os.getenv('receiver_email')
+        message = f"""\
         Subject: TMS data
         Start: {self.start_date}
         End: {self.end_date}
         This message is sent from Python."""
-        print(self.message)
+        print(message)
         with smtplib.SMTP_SSL(self.smtp_server, self.port, context=context) as server:
             server.login(self.sender_email, self.password)
-            server.sendmail(self.sender_email, self.receiver_email, self.message)
+            server.sendmail(self.sender_email, self.receiver_email, message)
         print('Thanks, email sent!')
 
     def windowed_mode(self):
         sg.theme('SystemDefault')
-        layout = [[sg.Text('This program will track your time')],
-                  [sg.Text('To stop in any moment please press CTRL+S combination')],
-                  [sg.Text('On exit, your start and finish work time will be printed out')],
+        layout = [[sg.Text('This program will track your time, press Start to initiate.')],
+                  [sg.Text('To stop in any moment please use Stop button.')],
+                  [sg.Text('On exit, your working time will be sent to given email address.')],
+                  [sg.Text('In case if you want to change SMTP/Email data, please delete .env file.')],
                   [sg.Button('Start'), sg.Button('Stop'), sg.Button('Exit')]]
-        window = sg.Window('TMS ver. 1.0', layout)
+        window = sg.Window('TMS ver. 1.0', layout, element_justification='c')
         self.thread = None
         while True:
             event, values = window.read()
             if event == 'Start' and self.thread is None:
                 self.start_timer()
-                print('Rozpoczynam prace')
                 self.kill_the_timer = False
                 self.thread = Thread(target=self.stop_timer, daemon=True)
                 self.thread.start()
@@ -96,11 +117,11 @@ class TMS:
                 self.timer_calc()
                 self.summary()
             if event == sg.WIN_CLOSED or event == 'Exit':
-                sleep(0.5)
-                self.send_mail()
                 break
         window.close()
 
 
 timer = TMS()
+timer.env_file()
 timer.windowed_mode()
+timer.send_mail()
