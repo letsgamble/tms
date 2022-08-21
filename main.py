@@ -4,6 +4,9 @@ import ezsheets
 from datetime import datetime
 import time
 import smtplib, ssl
+import PySimpleGUI as sg
+from threading import Thread
+from time import sleep
 
 
 class TMS:
@@ -14,21 +17,18 @@ class TMS:
         self.stop = 0
         self.start_date = ''
         self.end_date = ''
-        self.check_free_row()
         self.time_now = datetime.now()
         self.sh.update(1, 1, 'Start time:')
         self.sh.update(2, 1, 'End time:')
-        self.row_to_start = 0
+        self.row_to_start = self.sh.rowCount + 1
         self.port = 465
         self.smtp_server = ""
         self.sender_email = ""
         self.receiver_email = ""
         self.password = ''
         self.message = ''
-
-    def check_free_row(self):
-        self.row_to_start = self.sh.rowCount + 1
-        return
+        self.kill_the_timer = True
+        self.thread = None
 
     def start_timer(self):
         print(f'This program will track your time')
@@ -40,15 +40,16 @@ class TMS:
 
     def stop_timer(self):
         start_time = time.time()
-        while True:
-            if time.time() - start_time >= 60:
+        while not self.kill_the_timer:
+            if time.time() - start_time >= 5:
+                sleep(0.5)
                 print('Another minute passed, updating the sheet...')
                 self.timer_calc()
                 start_time = time.time()
-            if keyboard.is_pressed("s"):
-                self.stop = timeit.default_timer()
-                print(f'"S" detected, finishing work.')
-                return self.stop
+        else:
+            self.stop = timeit.default_timer()
+            print('Finishing work.')
+            return self.stop
 
     def timer_calc(self):
         self.end_date = str(datetime.now()).split('.')[0]
@@ -73,11 +74,33 @@ class TMS:
             server.sendmail(self.sender_email, self.receiver_email, self.message)
         print('Thanks, email sent!')
 
+    def windowed_mode(self):
+        sg.theme('SystemDefault')
+        layout = [[sg.Text('This program will track your time')],
+                  [sg.Text('To stop in any moment please press CTRL+S combination')],
+                  [sg.Text('On exit, your start and finish work time will be printed out')],
+                  [sg.Button('Start'), sg.Button('Stop'), sg.Button('Exit')]]
+        window = sg.Window('TMS ver. 1.0', layout)
+        self.thread = None
+        while True:
+            event, values = window.read()
+            if event == 'Start' and self.thread is None:
+                self.start_timer()
+                print('Rozpoczynam prace')
+                self.kill_the_timer = False
+                self.thread = Thread(target=self.stop_timer, daemon=True)
+                self.thread.start()
+            if event == 'Stop':
+                self.kill_the_timer = True
+                self.thread = None
+                self.timer_calc()
+                self.summary()
+            if event == sg.WIN_CLOSED or event == 'Exit':
+                sleep(0.5)
+                self.send_mail()
+                break
+        window.close()
+
 
 timer = TMS()
-timer.check_free_row()
-timer.start_timer()
-timer.stop_timer()
-timer.timer_calc()
-timer.summary()
-timer.send_mail()
+timer.windowed_mode()
