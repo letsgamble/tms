@@ -61,7 +61,6 @@ class TMS:
         start_time = time.time()
         while not self.kill_the_timer:
             if time.time() - start_time >= 60:
-                sleep(0.5)
                 print('Another minute passed, updating the sheet...')
                 self.timer_calc()
                 start_time = time.time()
@@ -97,26 +96,26 @@ class TMS:
 
     def windowed_mode(self):
         sg.theme('SystemDefault')
-        layout = [[sg.Text('This program will track your time, press Start to initiate.')],
-                  [sg.Text('To stop in any moment please use Stop button.')],
-                  [sg.Text('On exit, your working time will be sent to given email address.')],
+        layout = [[sg.Text('This program will track your time, press START to initiate.')],
+                  [sg.Text('To stop in any moment please use STOP button.')],
+                  [sg.Text('On EXIT, your working time will be sent to given email address.')],
                   [sg.Text('In case if you want to change SMTP/Email data, please delete .env file.')],
-                  [sg.Button('Start'), sg.Button('Stop'), sg.Button('Exit')]]
+                  [sg.Button('START'), sg.Button('STOP'), sg.Button('EXIT')]]
         window = sg.Window('TMS ver. 1.0', layout, element_justification='c')
         self.thread = None
         while True:
             event, values = window.read()
-            if event == 'Start' and self.thread is None:
+            if event == 'START' and self.thread is None:
                 self.start_timer()
                 self.kill_the_timer = False
                 self.thread = Thread(target=self.stop_timer, daemon=True)
                 self.thread.start()
-            if event == 'Stop':
+            if event == 'STOP':
                 self.kill_the_timer = True
                 self.thread = None
                 self.timer_calc()
                 self.summary()
-            if event == sg.WIN_CLOSED or event == 'Exit':
+            if event == sg.WIN_CLOSED or event == 'EXIT':
                 break
         window.close()
 
